@@ -103,7 +103,8 @@ while has line
     time <- get_time(line)
     params <- get_params(time)
     if params is not empty
-        output(params, time)
+        service <- get_service(line)
+        output("service,params", time)
 \end{verbatim}
 \end{frame}
 
