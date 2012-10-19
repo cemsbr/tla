@@ -57,6 +57,42 @@ Mas e dos outros serviços participantes da composição?
 \end{frame}
 
 \section{Dados}
+
+\subsection{Gerador de Carga}
+\begin{frame}[fragile]
+Saída do gerador de carga:
+
+\begin{verbatim}
+# orch,1,50,1349926295888
+424
+892
+(...)
+2017
+2038
+# orch,1,100,1349926297945
+1110
+1189
+(...)
+\end{verbatim}
+
+\begin{description}
+\item[orch,1] Arquitetura
+\item[50/100] Número de clientes simultâneos (eixo x)
+\item[134552629...] Tempo em milissegundos
+\end{description}
+\end{frame}
+
+\subsection{Log}
+\begin{frame}[fragile]
+Formato modificado do log de Apache Tomcat:
+\begin{verbatim}
+198.55.32.149 - - [09/Oct/2012:02:47:56 -0700] "POST
+/supermarket5/orchestration HTTP/1.1" 200 914 811
+\end{verbatim}
+A qual teste esse acesso pertence?
+\end{frame}
+
+\section{Map}
 \begin{frame}
 \end{frame}
 
