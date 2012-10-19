@@ -92,7 +92,8 @@ Formato modificado do log de Apache Tomcat (200 GB):
 A qual teste esse acesso pertence?
 \end{frame}
 
-\section{Map}
+\section{Hadoop}
+\subsection{Map}
 \begin{frame}[fragile]
 Pré-requisito: pela saída do gerador de carga, gerar uma tabela de horários e parâmetros dos testes. Utilizando-a, podemos obter \emph{orch,1,50} através de \emph{10/Oct/2012:20:31:35}.
 
@@ -103,6 +104,20 @@ while has line
     params <- get_params(time)
     if params is not empty
         output(params, time)
+\end{verbatim}
+\end{frame}
+
+\subsection{Reduce}
+\begin{frame}[fragile]
+Para cada conjunto de parâmetros (arquitetura, teste), as médias e seus intervalos de confiança serão mostrados em gráficos.
+
+\begin{verbatim}
+REDUCE
+while has value
+    values.store(value)
+mean <- get_mean(values)
+ic <- get_ic(values, mean)
+output(key, "mean,ic")
 \end{verbatim}
 \end{frame}
 
