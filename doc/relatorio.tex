@@ -43,7 +43,6 @@
     \end{Large}
   \end{center}
 
-
   \vfill
 
   \begin{center}
@@ -74,21 +73,45 @@
 
 \section{Introdução}
 
-Este trabalho tem o objetivo
+Este trabalho visa analisar logs de servidores web e gerar dados para montar gráficos como o da Figura~\ref{fig:portal}. Ele mostra a média do tempo de resposta de um serviço conforme o número de clientes simultâneos aumenta. Um intervalo de confiança de 95\% também foi calculado para cada média, mas não é mostrado por ser muito pequeno neste caso.
+
+A Figura~\ref{fig:portal} usou dados obtidos atráves de um gerador de carga sobre o serviço \emph{Portal} (a ser detalhado em \ref{sec:fmarket}). Além desse serviço, desejamos analisar o desempenho de todos os outros envolvidos na composição. Isso é possível através da análise dos logs de cada servidor, e o Hadoop nos ajudará a processar os 200 GB de logs do experimento executado.
+
+\begin{figure}[!ht]
+  \begin{center}
+    \includegraphics[width=\linewidth,clip=true,trim=1mm 6mm 3mm 20mm]{../talk/figures/portals1-4}
+  \caption{Tempo médio de resposta do serviço \emph{Portal}.}
+  \end{center}
+  \label{fig:portal}
+\end{figure}
 
 \subsection{Caso de Uso}
+\label{sec:fmarket}
 
-Future market
+O experimento utilizou a composição de serviços \href{http://github.com/choreos/future_market_choreography/}{Future Market}, escrita em java e implantanda em Apache Tomcat, sendo um serviço por máquina. Resumidamente, o gerador de carga simula um cliente que deseja comprar uma lista de produtos nos supermercados que oferecem o menor preço para cada um deles. Além dos supermercados, existem outros serviços como banco, fornecedor, fabricante, entrega de pacotes e registro de serviços.
 
-orch
-chor
+Existem mais de uma instância de um determinado serviço, podendo haver até 17 no total em nosso experimento (em 17 servidores diferentes). Em particular, estamos interessados em comparar dois tipos de composição: orquestração e coreografia. No primeiro tipo, os serviços comunicam-se uns com os outros por intermédio do serviço \emph{Portal}, como podemos ver na Figura~\ref{fig:orch}. Já na coreografia, os serviços se comunicam diretamente, como na Figura~\ref{fig:chor}. 
 
-resulta do portal
+\begin{figure}
+  \begin{center}
+    \includegraphics[width=\textwidth,clip=true,trim=7mm 9mm 8mm 16mm]{../talk/figures/orch}
+    \caption{Interação entre serviços na versão com orquestração.}
+    \label{fig:orch}
+  \end{center}
+\end{figure}
 
-\section{Dados}
+\begin{figure}
+  \begin{center}
+    \includegraphics[width=\textwidth,clip=true,trim=2mm 10mm 5mm 14mm]{../talk/figures/chor}
+    \caption{Interação entre serviços na versão com coreografia.}
+    \label{fig:chor}
+  \end{center}
+\end{figure}
+
+\section{Dados de Entrada}
 
 \subsection{Gerador de Carga}
-Saída do gerador de carga (125 MB):
+O gerador de carga desenvolvido para o \emph{Portal} produz um log no seguinte formato:
 
 \begin{verbatim}
 # orch,1,50,1349926295888
@@ -103,27 +126,47 @@ Saída do gerador de carga (125 MB):
 (...)
 \end{verbatim}
 
-\begin{description}
-  \item[orch,1] Arquitetura
-  \item[50/100] Número de clientes simultâneos (eixo x)
-  \item[134552629...] Tempo em milissegundos
-\end{description}
+As linhas que iniciam com \verb/#/ possuem a seguinte semântica:\\
+
+\begin{tabular}{r l}
+  {\bf orch,1} & Arquitetura (orquestração, {\bf1} portal)\\
+  {\bf 50/100} & Número de clientes simultâneos (eixo x)\\
+  {\bf 134552629...} & Instante da execução, em milissegundos
+\end{tabular}
+\\
+
+Em seguida, os tempos de resposta são registrados um por linha, totalizando $n$ registros, onde $n$ é o número de clientes simultâneos. A simulação contém mais de uma ocorrência para uma dada arquitetura e número de clientes simultâneos.
 
 \subsection{Log}
-  Formato modificado do log de Apache Tomcat (200 GB):
+  O formato do log do Apache Tomcat foi modificado, possuindo um campo a mais que o padão no final, correspondente ao tempo de processamento da requisição. Como exemplo, temos a linha:
+
 \begin{verbatim}
 198.55.32.149 - - [09/Oct/2012:02:47:56 -0700] "POST
 /supermarket5/orchestration HTTP/1.1" 200 914 811
 \end{verbatim}
 
-    A qual teste esse acesso pertence?
+Neste exemplo, a requisição ao serviço \emph{Supermarket} de número 5 na orquestração demorou 811 milissegundos para ser processada. Note que não há como inferir, somente por esta linha, quantos clientes simultâneos estavam acessando o portal neste momento, assim como outras características da arquitetura (número de portais).
 
-    \section{Hadoop}
-    \subsection{Map}
-    Pré-requisito: pela saída do gerador de carga, gerar uma tabela de horários e   parâmetros dos testes. Utilizando-a, podemos obter \emph{orch,1,50} através de  \emph{10/Oct/2012:20:31:35}.
+\section{Hadoop}
+
+Utilizaremos MapReduce através do Apache Hadoop para calcular médias e desvios padrão por tipo de experimento num total de 200 GB de dados. Um tipo de experimento é determinado pelo tipo de composição, número de portais e pela quantidade de clientes simultâneos. Os pseudo-códigos das funções \emph{Map} e \emph{Reduce} são apresentados nas próximas subseções.
+
+\subsection{Map}
+
+Nesta fase, geramos como chave o tipo de experimento e um identificador para o serviço (ex.: \emph{supermarket5}, \emph{bank}). Para tal, é necessário fazer a corespondência entre o tempo da requisição registrado no servidor web e o tipo de experimento em andamento no gerador de carga. Como exemplo, a função\\ \verb|get_params("10/Oct/2012:20:31:35")| retornaria \verb/orch,1,50/. Caso o horário esteja fora do experimento, o retorno será vazio. A melhor maneira de implementar essa função será avaliada durante o desenvolvimento. Já a função \emph{Map} pode ser ilustrada pelo pseudo-código a seguir:
+
+\begin{verbatim}
+MAP
+while has line
+    time <- get_time(line)
+    params <- get_params(time)
+    if params is not empty
+        service <- get_service(line)
+        output("service,params", time)
+\end{verbatim}
 
 \subsection{Reduce}
-Para cada conjunto de parâmetros (arquitetura, teste), as médias e seus         intervalos de confiança serão mostrados em gráficos.
+A função \emph{Reduce} receberá inúmeros tempos de resposta para cada tipo de experimento. Seu trabalho será o de resumir os dados em média e intervalo de confiança (necessário o cálculo do desvio padrão), como no pseudo-código abaixo:
 
 \begin{verbatim}
 REDUCE
@@ -132,26 +175,8 @@ while has value
   mean <- get_mean(values)
   ic <- get_ic(values, mean)
   output(key, "mean,ic")
-  \end{verbatim}
+\end{verbatim}
 
-  \subsection{Cuidados}
-  Alguns cuidados são necessários nos cálculos da redução:
-  \begin{itemize}
-  \item \emph{Overflow} numérico
-  \item \emph{Overflow} de memória
-  \end{itemize}
-
-%\begin{figure}[!ht]
-%  \begin{center}
-%    \includegraphics[width=5cm]{fig001.jpg}
-%  \end{center}
-%  \caption{Estrutura da Pilha}
-%  \label{fig:exemplo}
-%\end{figure}
-%
-%Muito dos algoritmos são extraídos de~\cite{ziviani:2004}.
-%
-%\bibliographystyle{plain}
-%\bibliography{modelo}
+É importante notar que não é possível obter a quantidade de valores sem antes percorrer todo o iterador, nem reiniciá-lo após chegar no seu fim. Essas características dificultam o cálculo da média e do desvio padrão. Sem os devidos cuidados, a soma de $n$ elementos pode estourar o tipo primitivo. Além disso, o armazenamento de todos os valores para reutilizá-los pode exigir mais memória que o disponível.
 
 \end{document}
