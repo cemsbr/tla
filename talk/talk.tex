@@ -3,9 +3,9 @@
 \usepackage[brazil]{babel}
 \usetheme{Warsaw}
 
-\title{Desenvolvendo uma aplicação para Apache Hadoop}
-\subtitle{MAC0431 - Introdução à Computação Paralela e Distribuída}
-\author{Carlos Eduardo M. Santos, Thiago Furtado}\institute{Universidade de São Paulo - IME}
+\title{Analisando Composições de Serviços com Apache Hadoop}
+\subtitle{Coreografia \emph{versus} Orquestração}
+\author{Carlos Eduardo M. Santos, Thiago Furtado}\institute{Universidade de São Paulo - IME\\MAC0431 - Introdução à Computação Paralela e Distribuída}
 \date{19 de outubro de 2012}
 
 \begin{document}
@@ -14,12 +14,50 @@
 \titlepage
 \end{frame}
 
+\section{Introdução}
+
 \begin{frame}
-Objetivo: 
+É fácil analisar o tempo de resposta do serviço chamado diretamente.
+\begin{figure}
+\includegraphics[width=\linewidth,clip=true,trim=1mm 2mm 3mm 20mm]{figures/portals1-4}
+\caption{Chamadas a operações do serviço \emph{Portal}.}
+\end{figure}
 \end{frame}
 
 \begin{frame}
-And I am the text located in the second content slide
+Mas e dos outros serviços participantes da composição?
+\begin{figure}
+\includegraphics[width=\textwidth,clip=true,trim=7mm 9mm 8mm 16mm]{figures/orch}
+\caption{Interação entre serviços na versão orquestrada.}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\begin{figure}
+\includegraphics[height=0.85\textheight,clip=true,trim=2mm 10mm 5mm 14mm]{figures/chor}
+\caption{Interação entre serviços na versão coreografada.}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\begin{itemize}
+  \item Gerar carga em um serviço por vez?
+  \begin{itemize}
+    \item Dependências entre serviços;
+    \item Muitos estados, entradas e saídas possíveis;
+    \item Outros serviços numa mesma máquina;
+  \end{itemize}
+  \item Analizar o log dos servidores:
+  \begin{itemize}
+    \item Sem necessidade de realizar outros testes;
+    \item Permite comparar com o resultado de toda a composição;
+    \item Problemas? Logs: tamanho, formato.
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\section{Dados}
+\begin{frame}
 \end{frame}
 
 \end{document}
