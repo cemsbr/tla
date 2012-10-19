@@ -60,7 +60,7 @@ Mas e dos outros serviços participantes da composição?
 
 \subsection{Gerador de Carga}
 \begin{frame}[fragile]
-Saída do gerador de carga:
+Saída do gerador de carga (125 MB):
 
 \begin{verbatim}
 # orch,1,50,1349926295888
@@ -84,7 +84,7 @@ Saída do gerador de carga:
 
 \subsection{Log}
 \begin{frame}[fragile]
-Formato modificado do log de Apache Tomcat:
+Formato modificado do log de Apache Tomcat (200 GB):
 \begin{verbatim}
 198.55.32.149 - - [09/Oct/2012:02:47:56 -0700] "POST
 /supermarket5/orchestration HTTP/1.1" 200 914 811
@@ -93,7 +93,17 @@ A qual teste esse acesso pertence?
 \end{frame}
 
 \section{Map}
-\begin{frame}
+\begin{frame}[fragile]
+Pré-requisito: pela saída do gerador de carga, gerar uma tabela de horários e parâmetros dos testes. Utilizando-a, podemos obter \emph{orch,1,50} através de \emph{10/Oct/2012:20:31:35}.
+
+\begin{verbatim}
+MAP
+while has line
+    time <- get_time(line)
+    params <- get_params(time)
+    if params is not empty
+        output(params, time)
+\end{verbatim}
 \end{frame}
 
 \end{document}
