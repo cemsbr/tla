@@ -1,0 +1,157 @@
+\documentclass[brazil, a4paper,12pt]{article}
+\usepackage[brazil]{babel}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{indentfirst}
+\usepackage[usenames]{color}
+\geometry{a4paper,left=3cm,right=3cm,top=2.5cm,bottom=2.5cm}
+
+\begin{document}
+\begin{titlepage}
+
+  \vfill
+
+  \begin{center}
+    \begin{large}
+      Universidade de São Paulo
+    \end{large}
+  \end{center}
+
+  \begin{center}
+    \begin{large}
+      Instituto de Matemática e Estatística
+    \end{large}
+  \end{center}
+
+  \begin{center}
+    \begin{large}
+      Programa de Pós-Graduação em Ciência da Computação
+    \end{large}
+  \end{center}
+
+  \vfill
+
+  \begin{center}
+    \begin{Large}
+        \textbf{MAC0431}\\
+        \textbf{Introdução à Computação Paralela e Distribuída}\\
+          Segundo Exercício Programa\\
+    \end{Large}
+  \end{center}
+
+
+  \vfill
+
+  \begin{center}
+    \begin{large}
+      Carlos Eduardo Moreira dos Santos\\
+      Thiago Furtado de Mendonça
+    \end{large}
+  \end{center}
+
+  \begin{center}
+    \begin{large}
+      Professor - Alfredo Goldman\\
+    \end{large}
+  \end{center}
+
+  \vfill
+
+  \begin{center}
+    \begin{large}
+      São Paulo \\
+      \today \\
+    \end{large}
+  \end{center}
+
+\clearpage
+\tableofcontents 
+\end{titlepage}
+
+\section{Introdução}
+
+Este trabalho tem o objetivo
+
+\subsection{Caso de Uso}
+
+Future market
+
+orch
+chor
+
+resulta do portal
+
+\section{Dados}
+
+\subsection{Gerador de Carga}
+Saída do gerador de carga (125 MB):
+
+\begin{verbatim}
+# orch,1,50,1349926295888
+424
+892
+(...)
+2017
+2038
+# orch,1,100,1349926297945
+1110
+1189
+(...)
+\end{verbatim}
+
+\begin{description}
+  \item[orch,1] Arquitetura
+  \item[50/100] Número de clientes simultâneos (eixo x)
+  \item[134552629...] Tempo em milissegundos
+\end{description}
+
+\subsection{Log}
+  Formato modificado do log de Apache Tomcat (200 GB):
+\begin{verbatim}
+198.55.32.149 - - [09/Oct/2012:02:47:56 -0700] "POST
+/supermarket5/orchestration HTTP/1.1" 200 914 811
+\end{verbatim}
+
+    A qual teste esse acesso pertence?
+
+    \section{Hadoop}
+    \subsection{Map}
+    Pré-requisito: pela saída do gerador de carga, gerar uma tabela de horários e   parâmetros dos testes. Utilizando-a, podemos obter \emph{orch,1,50} através de  \emph{10/Oct/2012:20:31:35}.
+
+\subsection{Reduce}
+Para cada conjunto de parâmetros (arquitetura, teste), as médias e seus         intervalos de confiança serão mostrados em gráficos.
+
+\begin{verbatim}
+REDUCE
+while has value
+    values.store(value)
+  mean <- get_mean(values)
+  ic <- get_ic(values, mean)
+  output(key, "mean,ic")
+  \end{verbatim}
+
+  \subsection{Cuidados}
+  Alguns cuidados são necessários nos cálculos da redução:
+  \begin{itemize}
+  \item \emph{Overflow} numérico
+  \item \emph{Overflow} de memória
+  \end{itemize}
+
+%\begin{figure}[!ht]
+%  \begin{center}
+%    \includegraphics[width=5cm]{fig001.jpg}
+%  \end{center}
+%  \caption{Estrutura da Pilha}
+%  \label{fig:exemplo}
+%\end{figure}
+%
+%Muito dos algoritmos são extraídos de~\cite{ziviani:2004}.
+%
+%\bibliographystyle{plain}
+%\bibliography{modelo}
+
+\end{document}
