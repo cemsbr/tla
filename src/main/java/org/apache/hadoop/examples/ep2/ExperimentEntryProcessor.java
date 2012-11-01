@@ -4,8 +4,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -74,4 +77,19 @@ public class ExperimentEntryProcessor {
 		return keys;
 	}
 
+	public Date getDateInMillis(String date) {
+		// apache tomcat date example -> 16/Oct/2012:00:00:08
+			
+		date = date.replaceFirst(":", " ");
+		
+		SimpleDateFormat format = new SimpleDateFormat("dd/MMM/yyy HH:mm:ss");
+		
+		try {
+			Date ds = format.parse(date);
+			return ds;
+		} catch (ParseException e) {
+			return null;
+		}
+		
+	}
 }

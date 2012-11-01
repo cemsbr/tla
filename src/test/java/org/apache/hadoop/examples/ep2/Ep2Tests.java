@@ -44,5 +44,11 @@ public class Ep2Tests {
 			assertTrue(entries.getEntriesKey().get(i) < entries.getEntriesKey().get(i+1));
 		}
  	}
+	
+	@Test
+	public void testFormatDateFromTomcat() {
+		String s = "16/Oct/2012:00:00:08";
+		System.out.println(entries.getDateInMillis(s));
+	}
 
 }
