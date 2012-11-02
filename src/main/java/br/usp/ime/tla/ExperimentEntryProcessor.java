@@ -1,4 +1,4 @@
-package org.apache.hadoop.examples.ep2;
+package br.usp.ime.tla;
 
 import java.io.BufferedReader;
 import java.io.IOException;

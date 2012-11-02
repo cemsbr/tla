@@ -1,10 +1,12 @@
-package org.apache.hadoop.examples.ep2;
+package br.usp.ime.tla;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import br.usp.ime.tla.ExperimentEntryProcessor;
 
 public class Ep2Tests {
 	
