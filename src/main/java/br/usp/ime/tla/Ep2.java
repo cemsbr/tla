@@ -1,7 +1,6 @@
 package br.usp.ime.tla;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +36,6 @@ public class Ep2 extends Configured implements Tool {
 
 		Configuration conf = getConf();
 
-		@SuppressWarnings("deprecation")
 		Job job = new Job(conf, "ep2");
 		job.setJarByClass(Ep2.class);
 
@@ -109,48 +107,19 @@ public class Ep2 extends Configured implements Tool {
 		public void reduce(Text key, Iterable<IntWritable> values,
 				Context context) throws IOException, InterruptedException {
 
-			int timeSum = 0;
-			short count = 0;
-			double mean = 0;
-			double confidenceInterval = 0;
-			double standardDeviation = 0;
+			final Statistics stats = new Statistics();
 
-			ArrayList<Integer> times = new ArrayList<Integer>();
-
-			for (IntWritable val : values) {
-				// calc the sum of times
-				timeSum += val.get();
-				// calc the number of execution
-				count++;
-				// stores times
-				times.add(val.get());
+			for (IntWritable value : values) {
+				stats.addValue(value.get());
 			}
 
-			/*
-			 * Mean
-			 */
-			mean = (double) timeSum / (double) count;
-
-			/*
-			 * Standard deviation
-			 */
-			double squaredSum = 0.0;
-			for (Integer time : times) {
-				squaredSum += ((time - mean) * (time - mean));
-			}
-			double variance = squaredSum / count;
-			standardDeviation = Math.sqrt(variance);
-
-			/*
-			 * Confidence interval
-			 */
-
-			confidenceInterval = (1.96 * standardDeviation) / Math.sqrt(count);
+			final double mean = stats.getMean();
+			final double confInterval = stats.getCI();
 
 			/*
 			 * Write results
 			 */
-			result.set("" + mean + "," + confidenceInterval);
+			result.set("" + mean + "," + confInterval);
 			context.write(key, result);
 		}
 	}
