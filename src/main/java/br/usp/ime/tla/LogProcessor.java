@@ -2,7 +2,6 @@ package br.usp.ime.tla;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.ParseException;
@@ -11,70 +10,61 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class LogProcessor {
 
-	private final String applicationLogPattern = "^# (orch|chor),(\\d+),(\\d+),(\\d+)";
-	private final String tomcatPattern = ""
-			+ "^(\\d{1,3}\\.){3}\\d{1,3} - - \\[(\\d){2}/(\\w){3}/(\\d){4}(:\\d{2}){3} -\\d{4}\\] "
+	private static final String EXP_TYPE_REGEX = "^# ((orch|chor),\\d+,\\d+),(\\d+)";
+	private static final String TOMCAT_REGEX = "^(\\d{1,3}\\.){3}\\d{1,3} - - \\[(\\d){2}/(\\w){3}/(\\d){4}(:\\d{2}){3} -\\d{4}\\] "
 			+ "\"POST (.+) (HTTP/1\\.1)\"( \\d+){3}";
 
-	HashMap<Long, String> entries;
-	private ArrayList<Long> keys;
-	private String fileName;
+	private static final Pattern EXP_PAT = Pattern.compile(EXP_TYPE_REGEX);
+	private static final Pattern TOMCAT_PAT = Pattern.compile(TOMCAT_REGEX);
 
-	public LogProcessor(String appLog) {
-		fileName = appLog;
-		populatesLogMap();
-		setExperimentKeys();
+	private static final Map<Long, String> EXP_TYPES = new HashMap<Long, String>();
+	private List<Long> sortedExpTimes;
+
+	private final SimpleDateFormat tomcatDateF = new SimpleDateFormat(
+			"dd/MMM/yyyy:HH:mm:ss");
+
+	public LogProcessor(final String expTypeLog) throws IOException {
+		parseExperimentLog(expTypeLog);
+		setExperimentData();
 	}
 
 	/*
-	 * Creates a key array list with entry map keys to maintain ir sorted
+	 * Creates a key array list with entry map keys to maintain it sorted
 	 */
-	private void setExperimentKeys() {
-		Set<Long> ks = entries.keySet();
-		keys = new ArrayList<Long>(ks);
-		Collections.sort(keys);
-	}
-
-	/*
-	 * Auxiliar method to populate the entry map
-	 */
-	private void populatesLogMap() {
-		entries = new HashMap<Long, String>();
-
-		try {
-			this.getExperimentEntryMap();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
+	private void setExperimentData() {
+		final Set<Long> times = EXP_TYPES.keySet();
+		sortedExpTimes = new ArrayList<Long>(times);
+		Collections.sort(sortedExpTimes);
 	}
 
 	/*
 	 * Reads the file entered as the first argument of TomcatLogAnalyzer, and
 	 * parses it to ge a Map of entries
 	 */
-	public void getExperimentEntryMap() throws FileNotFoundException {
-		BufferedReader reader = new BufferedReader(new InputStreamReader(
-				new FileInputStream(fileName)));
-		String line = null;
-		try {
-			while ((line = reader.readLine()) != null) {
-				if (this.matchesApplicationLog(line)) {
+	public void parseExperimentLog(final String filename) throws IOException {
+		final BufferedReader reader = new BufferedReader(new InputStreamReader(
+				new FileInputStream(filename)));
+		String line;
+		while ((line = reader.readLine()) != null) {
+			parseExperimentTypeLogLine(line);
+		}
+		reader.close();
+	}
 
-					String exp = line.split(" ")[1];
-					entries.put(
-							Long.parseLong(exp.split(",")[3]),
-							exp.split(",")[0].concat(","
-									+ exp.split(",")[1].concat(","
-											+ exp.split(",")[2])));
-
-				}
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
+	private void parseExperimentTypeLogLine(final String line) {
+		final Matcher matcher = EXP_PAT.matcher(line);
+		if (matcher.find()) {
+			final Long time = Long.parseLong(matcher.group(3));
+			final String expType = matcher.group(1);
+			EXP_TYPES.put(time, expType);
 		}
 	}
 
@@ -83,8 +73,8 @@ public class LogProcessor {
 	 * 
 	 * @return true if string matches # orch|chor,n,n,long
 	 */
-	public boolean matchesApplicationLog(String line) {
-		return line.matches(applicationLogPattern);
+	public boolean matchesExperimentTypeLog(final String line) {
+		return EXP_PAT.matcher(line).find();
 	}
 
 	/*
@@ -94,18 +84,33 @@ public class LogProcessor {
 	 * 
 	 * @return a string like orch,1,100
 	 */
-	public String getParams(long l) {
-		if (keys.contains(l))
-			return entries.get(l);
+	public String getExperimentType(final long time) {
+		Long startTime;
 
+		if (EXP_TYPES.containsKey(time)) {
+			startTime = time;
+		} else {
+			startTime = searchExpStartTime(time);
+		}
+
+		return EXP_TYPES.get(startTime);
+	}
+
+	private long searchExpStartTime(final long time) {
 		int index = 0;
-		while (keys.get(index) < l && index < keys.size())
+
+		while (sortedExpTimes.get(index) < time
+				&& index < sortedExpTimes.size()) {
 			index++;
+		}
 
-		if (index >= keys.size())
-			return entries.get(keys.get(keys.size() - 1));
+		if (index >= sortedExpTimes.size()) {
+			index = sortedExpTimes.size() - 1;
+		} else {
+			index--;
+		}
 
-		return entries.get(keys.get(index - 1));
+		return sortedExpTimes.get(index);
 	}
 
 	/*
@@ -113,15 +118,8 @@ public class LogProcessor {
 	 * 
 	 * @return Date object if date can be converted to Date and null otherwise
 	 */
-	public Date getDateInMillis(String date) {
-		date = date.replaceFirst(":", " ");
-		SimpleDateFormat format = new SimpleDateFormat("dd/MMM/yyy HH:mm:ss");
-		try {
-			Date ds = format.parse(date);
-			return ds;
-		} catch (ParseException e) {
-			return null;
-		}
+	public Date getDateInMillis(final String tomcatDate) throws ParseException {
+		return tomcatDateF.parse(tomcatDate);
 	}
 
 	/*
@@ -129,21 +127,21 @@ public class LogProcessor {
 	 * 
 	 * @return true if string matches tomcatPattern
 	 */
-	public boolean matchesTomcatPattern(String string) {
-		return string.matches(tomcatPattern);
+	public boolean matchesTomcatPattern(final String line) {
+		return TOMCAT_PAT.matcher(line).find();
 	}
 
 	/*
 	 * Used only to test
 	 */
-	public HashMap<Long, String> getExperimentEntries() {
-		return entries;
+	public Map<Long, String> getExperimentEntries() {
+		return EXP_TYPES;
 	}
 
 	/*
 	 * Used only to test
 	 */
-	public ArrayList<Long> getEntriesKey() {
-		return keys;
+	public List<Long> getSortedExpTimes() {
+		return sortedExpTimes;
 	}
 }

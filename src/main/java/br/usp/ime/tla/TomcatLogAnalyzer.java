@@ -1,6 +1,7 @@
 package br.usp.ime.tla;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
@@ -85,12 +86,17 @@ public class TomcatLogAnalyzer extends Configured implements Tool {
 
 			// Object Date created with a substring of timeString (the substring
 			// without '[')
-			Date date = entryProcessor.getDateInMillis(timeString.substring(1));
+			Date date = null;
+			try {
+				date = entryProcessor.getDateInMillis(timeString.substring(1));
+			} catch (ParseException e) {
+				e.printStackTrace();
+			}
 			if (date == null)
 				return;
 
 			// Search for experiment identity by date
-			String params = entryProcessor.getParams(date.getTime());
+			String params = entryProcessor.getExperimentType(date.getTime());
 
 			if (!params.isEmpty()) {
 				lineKey.set(itr[6].toString().concat("," + params));

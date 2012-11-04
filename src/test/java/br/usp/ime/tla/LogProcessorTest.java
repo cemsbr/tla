@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.text.ParseException;
 import java.util.Date;
 
 import org.junit.Before;
@@ -14,7 +16,7 @@ public class LogProcessorTest {
 	private LogProcessor entries;
 
 	@Before
-	public void setUp() {
+	public void setUp() throws IOException {
 		entries = new LogProcessor("src/test/resources/filtered_log");
 	}
 
@@ -26,32 +28,32 @@ public class LogProcessorTest {
 
 	@Test
 	public void testGetParamsWithExactTime() {
-		assertEquals("orch,2,100", entries.getParams(1350177735140L));
+		assertEquals("orch,2,100", entries.getExperimentType(1350177735140L));
 	}
 
 	@Test
 	public void testGetParams() {
 
-		assertEquals("chor,1,100", entries.getParams(1350395751281L));
-		assertEquals("chor,1,100", entries.getParams(1350395753590L));
+		assertEquals("chor,1,100", entries.getExperimentType(1350395751281L));
+		assertEquals("chor,1,100", entries.getExperimentType(1350395753590L));
 
-		assertEquals("chor,1,150", entries.getParams(1350395753591L));
-		assertEquals("chor,1,150", entries.getParams(1350395753592L));
-		assertEquals("chor,1,150", entries.getParams(1350395756409L));
+		assertEquals("chor,1,150", entries.getExperimentType(1350395753591L));
+		assertEquals("chor,1,150", entries.getExperimentType(1350395753592L));
+		assertEquals("chor,1,150", entries.getExperimentType(1350395756409L));
 
 	}
 
 	@Test
 	public void testSortedKeyArray() {
 
-		for (int i = 0; i < entries.getEntriesKey().size() - 2; i++) {
-			assertTrue(entries.getEntriesKey().get(i) < entries.getEntriesKey()
+		for (int i = 0; i < entries.getSortedExpTimes().size() - 2; i++) {
+			assertTrue(entries.getSortedExpTimes().get(i) < entries.getSortedExpTimes()
 					.get(i + 1));
 		}
 	}
 
 	@Test
-	public void testFormatDateFromTomcat() {
+	public void testFormatDateFromTomcat() throws ParseException {
 		String s = "16/Oct/2012:00:00:08";
 		Date date = entries.getDateInMillis(s);
 
@@ -74,10 +76,10 @@ public class LogProcessorTest {
 
 	@Test
 	public void testLogApplicationMatching() {
-		assertTrue(entries.matchesApplicationLog("# orch,2,50,1349926584487"));
-		assertTrue(entries.matchesApplicationLog("# orch,1,300,1350296418527"));
-		assertTrue(entries.matchesApplicationLog("# chor,4,800,1350298025478"));
-		assertTrue(entries.matchesApplicationLog("# chor,1,1000,1350190614970"));
-		assertFalse(entries.matchesApplicationLog("# warmup"));
+		assertTrue(entries.matchesExperimentTypeLog("# orch,2,50,1349926584487"));
+		assertTrue(entries.matchesExperimentTypeLog("# orch,1,300,1350296418527"));
+		assertTrue(entries.matchesExperimentTypeLog("# chor,4,800,1350298025478"));
+		assertTrue(entries.matchesExperimentTypeLog("# chor,1,1000,1350190614970"));
+		assertFalse(entries.matchesExperimentTypeLog("# warmup"));
 	}
 }
