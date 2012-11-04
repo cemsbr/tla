@@ -31,7 +31,7 @@ public class Ep2 extends Configured implements Tool {
 			System.err.println("Usage: ep2 <in> <out>");
 			return 0;
 		}
-
+		
 		entryProcessor = new ExperimentEntryProcessor();
 
 		Configuration conf = getConf();
@@ -41,11 +41,8 @@ public class Ep2 extends Configured implements Tool {
 
 		job.setMapperClass(EpMapper.class);
 		job.setReducerClass(EpReducer.class);
-
-		/*
-		 * job.setOutputKeyClass(Text.class);
-		 * job.setOutputValueClass(Text.class);
-		 */
+		
+		job.setInputFormatClass(FileInputFormat.class);
 
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(IntWritable.class);
@@ -56,7 +53,7 @@ public class Ep2 extends Configured implements Tool {
 		FileOutputFormat.setOutputPath(job, outputpath);
 
 		boolean result = job.waitForCompletion(true);
-
+		
 		return (result ? 0 : 1);
 	}
 
@@ -92,8 +89,8 @@ public class Ep2 extends Configured implements Tool {
 				lineKey.set(itr[6].toString().concat("," + params));
 
 				// write response time for this experiment instance
-				lineValue.set(Short.parseShort(itr[itr.length - 1].toString()));
-
+				lineValue.set(Integer.parseInt(itr[itr.length - 1].toString()));
+				
 				context.write(lineKey, lineValue);
 			}
 		}
