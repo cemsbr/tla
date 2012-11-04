@@ -17,12 +17,12 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-public class Ep2 extends Configured implements Tool {
+public class TomcatLogAnalyzer extends Configured implements Tool {
 
-	private static ExperimentEntryProcessor entryProcessor;
+	private static LogProcessor entryProcessor;
 
 	public static void main(String[] args) throws Exception {
-		ToolRunner.run(new Configuration(), new Ep2(), args);
+		ToolRunner.run(new Configuration(), new TomcatLogAnalyzer(), args);
 	}
 
 	@Override
@@ -33,7 +33,7 @@ public class Ep2 extends Configured implements Tool {
 			return 0;
 		}
 		
-		entryProcessor = new ExperimentEntryProcessor(args[0]);
+		entryProcessor = new LogProcessor(args[0]);
 
 		Configuration conf = getConf();
 		
@@ -43,7 +43,7 @@ public class Ep2 extends Configured implements Tool {
 		fs.delete(new Path(args[2]), true);
 
 		Job job = new Job(conf, "ep2");
-		job.setJarByClass(Ep2.class);
+		job.setJarByClass(TomcatLogAnalyzer.class);
 
 		job.setMapperClass(EpMapper.class);
 		job.setReducerClass(EpReducer.class);

@@ -9,13 +9,13 @@ import java.util.Date;
 import org.junit.Before;
 import org.junit.Test;
 
-public class Ep2Tests {
+public class LogProcessorTest {
 
-	private ExperimentEntryProcessor entries;
+	private LogProcessor entries;
 
 	@Before
 	public void setUp() {
-		entries = new ExperimentEntryProcessor("src/test/resources/filtered_log");
+		entries = new LogProcessor("src/test/resources/filtered_log");
 	}
 
 	@Test

@@ -62,7 +62,7 @@
 					</descriptors>
 					<archive>
 						<manifest>
-							<mainClass>br.usp.ime.tla.Ep2</mainClass>
+							<mainClass>br.usp.ime.tla.TomcatLogAnalyzer</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
