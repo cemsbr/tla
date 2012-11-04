@@ -74,6 +74,9 @@ public class Ep2 extends Configured implements Tool {
 		// called for each line
 		public void map(Object key, Text value, Context context)
 				throws IOException, InterruptedException {
+			
+			if(!entryProcessor.matchesTomcatPattern(value.toString())) return;
+			
 			// splits each line
 			String[] itr = value.toString().split(" ");
 
