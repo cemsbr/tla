@@ -8,7 +8,11 @@
 \usepackage{hyperref}
 \usepackage{indentfirst}
 \usepackage[usenames]{color}
+\usepackage{ae,amsfonts,amsmath,amssymb,colortbl,keyval,lscape,paralist,
+            xspace,setspace,subfigure,tabularx,times,listings,lettrine,
+            pdftricks,textfit,titlesec,fancyhdr}
 \geometry{a4paper,left=3cm,right=3cm,top=2.5cm,bottom=2.5cm}
+\lstset{language=Java, tabsize=2, stringstyle=\ttfamily,basicstyle=\ttfamily, showstringspaces=false}
 
 \begin{document}
 \begin{titlepage}
@@ -149,21 +153,38 @@ Neste exemplo, a requisição ao serviço \emph{Supermarket} de número 5 na orq
 
 \section{Hadoop}
 
-Utilizaremos MapReduce através do Apache Hadoop para calcular médias e desvios padrão por tipo de experimento num total de 200 GB de dados. Um tipo de experimento é determinado pelo tipo de composição, número de portais e pela quantidade de clientes simultâneos. Os pseudo-códigos das funções \emph{Map} e \emph{Reduce} são apresentados nas próximas subseções.
+Utilizaremos MapReduce através do Apache Hadoop para calcular médias e desvios padrão por tipo de experimento num total de 200 GB de dados. Um tipo de experimento é determinado pelo tipo de composição, número de portais e pela quantidade de clientes simultâneos. Os códigos das funções \emph{Map} e \emph{Reduce} são apresentados nas próximas subseções.
 
 \subsection{Map}
 
-Nesta fase, geramos como chave o tipo de experimento e um identificador para o serviço (ex.: \emph{supermarket5}, \emph{bank}). Para tal, é necessário fazer a corespondência entre o tempo da requisição registrado no servidor web e o tipo de experimento em andamento no gerador de carga. Como exemplo, a função\\ \verb|get_params("10/Oct/2012:20:31:35")| retornaria \verb/orch,1,50/. Caso o horário esteja fora do experimento, o retorno será vazio. A melhor maneira de implementar essa função será avaliada durante o desenvolvimento. Já a função \emph{Map} pode ser ilustrada pelo pseudo-código a seguir:
+Nesta fase, geramos como chave o tipo de experimento e um identificador para o serviço (ex.: \emph{supermarket5}, \emph{bank}). Para tal, é necessário fazer a corespondência entre o tempo da requisição registrado no servidor web e o tipo de experimento em andamento no gerador de carga. Como exemplo, a função \\ \verb|getParams("10/Oct/2012:20:31:35")| retorna \verb/orch,1,50/. Caso o horário esteja fora do experimento, o retorno será vazio. Para o Map, o log do gerador de carga é interpretado e armazenado numa estrutura HashMap onde a chave é o \textit{timestamp} da requisição em milissegundos e o valor associado o tipo de experimento. Uma estrutura auxiliar é mantida em memória para que a análise possa ser feita levando em consideração que os experimentos estão ordenados em relação ao \textit{timestamp}.
 
-\begin{verbatim}
-MAP
-while has line
-    time <- get_time(line)
-    params <- get_params(time)
-    if params is not empty
-        service <- get_service(line)
-        output("service,params", time)
-\end{verbatim}
+A função \verb|getParams(long l)| recebe como parâmetro o \textit{timestamp} do log do Apache Tomcat e percorre as entradas do HashMap tentando associar a entrada do log do tomcat com uma das instâncias do experimento. Se \textit{t} é o parâmetro passado como valor de \verb/l/, então o retorno é o tipo de experimento que tem chave \textit{k}, \textit{ti <= k < tj}, para \textit{ti} e \textit{tj} duas chaves adjacentes, \textit{i < j}. 
+
+A função \emph{Map}, para cada entrada, busca pelo experimento que fez a requisição e mapeia o tempo de resposta da requisição e é ilustrada pelo código a seguir:
+
+\begin{figure} [!htb]
+\begin{center}
+\scriptsize
+\begin{lstlisting}[numbers=left]
+public void map(Object key, Text value, Context context)
+		throws IOException, InterruptedException {
+	if(!entryProcessor.matchesTomcatPattern(value.toString())) return;
+	String[] itr = value.toString().split(" ");
+	String timeString = itr[3].toString();
+	Date date = entryProcessor.getDateInMillis(timeString.substring(1));
+	if (date == null)
+		return;
+	String params = entryProcessor.getParams(date.getTime());
+	if (!params.isEmpty()) {
+		lineKey.set(itr[6].toString().concat("," + params));
+		lineValue.set(Integer.parseInt(itr[itr.length - 1].toString()));
+		context.write(lineKey, lineValue);
+	}
+}
+\end{lstlisting}
+\end{center}
+\end{figure}
 
 \subsection{Reduce}
 A função \emph{Reduce} receberá inúmeros tempos de resposta para cada tipo de experimento. Seu trabalho será o de resumir os dados em média e intervalo de confiança (necessário o cálculo do desvio padrão), como no pseudo-código abaixo:
