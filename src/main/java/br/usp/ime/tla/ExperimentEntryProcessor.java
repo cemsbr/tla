@@ -1,8 +1,9 @@
 package br.usp.ime.tla;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -16,13 +17,20 @@ public class ExperimentEntryProcessor {
 	
 	HashMap<Long, String> entries;
 	private ArrayList<Long> keys;
+	private String fileName;
 	
-	public ExperimentEntryProcessor() {
+	public ExperimentEntryProcessor(String appLog) {
+		
+		fileName = appLog;
 		
 		entries = new HashMap<Long, String>();
 		
 		// populates the hash map
-		this.getExperimentEntryMap();
+		try {
+			this.getExperimentEntryMap();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
 		
 		Set<Long> ks = entries.keySet();
 		keys = new ArrayList<Long>(ks);
@@ -30,11 +38,13 @@ public class ExperimentEntryProcessor {
 		Collections.sort(keys);
 	}
 	
-	public void getExperimentEntryMap() {
+	public void getExperimentEntryMap() throws FileNotFoundException {
 		
-		InputStream is = ClassLoader.getSystemResourceAsStream("filtered_log");
+		//InputStream is = ClassLoader.getSystemResourceAsStream("filtered_log");
 		
-	    BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+		
+		
+	    BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName)));
 	    
 	    String line = null;
 	    

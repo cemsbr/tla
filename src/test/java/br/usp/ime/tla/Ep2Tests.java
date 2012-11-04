@@ -14,7 +14,7 @@ public class Ep2Tests {
 
 	@Before
 	public void setUp() {
-		entries = new ExperimentEntryProcessor();
+		entries = new ExperimentEntryProcessor("src/test/resources/filtered_log");
 	}
 
 	@Test

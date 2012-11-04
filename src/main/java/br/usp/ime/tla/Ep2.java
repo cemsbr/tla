@@ -5,6 +5,7 @@ import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -27,29 +28,32 @@ public class Ep2 extends Configured implements Tool {
 	@Override
 	public int run(String[] args) throws Exception {
 
-		if (args.length != 2) {
-			System.err.println("Usage: ep2 <in> <out>");
+		if (args.length != 3) {
+			System.err.println("Usage: ep2 <appLog> <in_path> <out_path>");
 			return 0;
 		}
 		
-		entryProcessor = new ExperimentEntryProcessor();
+		entryProcessor = new ExperimentEntryProcessor(args[0]);
 
 		Configuration conf = getConf();
+		
+		FileSystem fs =  FileSystem.get(conf);
+		
+		/* Overwrite output dir if exists */
+		fs.delete(new Path(args[2]), true);
 
 		Job job = new Job(conf, "ep2");
 		job.setJarByClass(Ep2.class);
 
 		job.setMapperClass(EpMapper.class);
 		job.setReducerClass(EpReducer.class);
-		
-		job.setInputFormatClass(FileInputFormat.class);
 
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(IntWritable.class);
 
-		Path outputpath = new Path(args[1]);
+		Path outputpath = new Path(args[2]);
 
-		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileInputFormat.addInputPath(job, new Path(args[1]));
 		FileOutputFormat.setOutputPath(job, outputpath);
 
 		boolean result = job.waitForCompletion(true);
