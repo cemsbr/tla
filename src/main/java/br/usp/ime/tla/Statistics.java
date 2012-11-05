@@ -8,14 +8,13 @@ public class Statistics {
 	private double mean = 0;
 
 	public void addValue(final int value) {
-		updateMean(value);
 		values.add(value);
+		updateMean(value);
 	}
 
 	private void updateMean(final int value) {
 		final double size = values.size();
-		// TODO Throw/catch values.size() == Integer.MAX_VALUE
-		mean = mean * (size / (size + 1)) + value / (size + 1);
+		mean = mean * ((size - 1) / size) + value / size;
 	}
 
 	public double getMean() {
