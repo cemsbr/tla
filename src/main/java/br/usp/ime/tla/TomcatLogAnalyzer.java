@@ -20,7 +20,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class TomcatLogAnalyzer extends Configured implements Tool {
 
-	private static LogProcessor entryProcessor;
+	static ExperimentLogParser expParser;
 
 	public static void main(String[] args) throws Exception {
 		ToolRunner.run(new Configuration(), new TomcatLogAnalyzer(), args);
@@ -33,13 +33,12 @@ public class TomcatLogAnalyzer extends Configured implements Tool {
 			System.err.println("Usage: ep2 <appLog> <in_path> <out_path>");
 			return 0;
 		}
-		
-		entryProcessor = new LogProcessor(args[0]);
+
+		expParser = new ExperimentLogParser(args[0]);
 
 		Configuration conf = getConf();
-		
-		FileSystem fs =  FileSystem.get(conf);
-		
+
+		FileSystem fs = FileSystem.get(conf);
 		/* Overwrite output dir if exists */
 		fs.delete(new Path(args[2]), true);
 
@@ -58,7 +57,7 @@ public class TomcatLogAnalyzer extends Configured implements Tool {
 		FileOutputFormat.setOutputPath(job, outputpath);
 
 		boolean result = job.waitForCompletion(true);
-		
+
 		return (result ? 0 : 1);
 	}
 
@@ -69,42 +68,36 @@ public class TomcatLogAnalyzer extends Configured implements Tool {
 	public static class EpMapper extends
 			Mapper<Object, Text, Text, IntWritable> {
 
-		private Text lineKey = new Text();
-		private IntWritable lineValue = new IntWritable();
+		private final Text lineKey = new Text();
+		private final IntWritable lineValue = new IntWritable();
+
+		private final TomcatLogParser tomcatParser = new TomcatLogParser();
+		private Date date;
+		private String service, type;
+		private int responseTime;
 
 		// called for each line
-		public void map(Object key, Text value, Context context)
-				throws IOException, InterruptedException {
-			
-			if(!entryProcessor.matchesTomcatPattern(value.toString())) return;
-			
-			// splits each line
-			String[] itr = value.toString().split(" ");
+		public void map(final Object key, final Text value,
+				final Context context) throws IOException, InterruptedException {
 
-			// 4th string has format [time
-			String timeString = itr[3].toString();
+			final String tomcatLine = value.toString();
+			if (!tomcatParser.setLine(tomcatLine)) {
+				return;
+			}
 
-			// Object Date created with a substring of timeString (the substring
-			// without '[')
-			Date date = null;
 			try {
-				date = entryProcessor.getDateInMillis(timeString.substring(1));
+				date = tomcatParser.getDate();
+				service = tomcatParser.getServiceName();
+				responseTime = tomcatParser.getResponseTime();
+				type = expParser.getType(date.getTime());
+
+				lineKey.set(service + "," + type);
+				lineValue.set(responseTime);
+				context.write(lineKey, lineValue);
 			} catch (ParseException e) {
 				e.printStackTrace();
-			}
-			if (date == null)
-				return;
-
-			// Search for experiment identity by date
-			String params = entryProcessor.getExperimentType(date.getTime());
-
-			if (!params.isEmpty()) {
-				lineKey.set(itr[6].toString().concat("," + params));
-
-				// write response time for this experiment instance
-				lineValue.set(Integer.parseInt(itr[itr.length - 1].toString()));
-				
-				context.write(lineKey, lineValue);
+			} catch (ExperimentNotFoundException e) {
+				e.printStackTrace();
 			}
 		}
 	}
