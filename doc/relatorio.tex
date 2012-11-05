@@ -12,7 +12,7 @@
             xspace,setspace,subfigure,tabularx,times,listings,lettrine,
             pdftricks,textfit,titlesec,fancyhdr}
 \geometry{a4paper,left=3cm,right=3cm,top=2.5cm,bottom=2.5cm}
-\lstset{language=Java, tabsize=2, stringstyle=\ttfamily,basicstyle=\ttfamily, showstringspaces=false}
+\lstset{language=Java, tabsize=4, stringstyle=\ttfamily,basicstyle=\ttfamily, showstringspaces=false}
 
 \begin{document}
 \begin{titlepage}
@@ -157,33 +157,34 @@ Utilizaremos MapReduce através do Apache Hadoop para calcular médias e desvios
 
 \subsection{Map}
 
-Nesta fase, geramos como chave o tipo de experimento e um identificador para o serviço (ex.: \emph{supermarket5}, \emph{bank}). Para tal, é necessário fazer a corespondência entre o tempo da requisição registrado no servidor web e o tipo de experimento em andamento no gerador de carga. Como exemplo, a função \\ \verb|getParams("10/Oct/2012:20:31:35")| retorna \verb/orch,1,50/. Caso o horário esteja fora do experimento, o retorno será vazio. Para o Map, o log do gerador de carga é interpretado e armazenado numa estrutura HashMap onde a chave é o \textit{timestamp} da requisição em milissegundos e o valor associado o tipo de experimento. Uma estrutura auxiliar é mantida em memória para que a análise possa ser feita levando em consideração que os experimentos estão ordenados em relação ao \textit{timestamp}.
+Nesta fase, geramos como chave o tipo de experimento e um identificador para o serviço (ex.: \emph{supermarket5}, \emph{bank}). Para tal, é necessário fazer a corespondência entre o tempo da requisição registrado no servidor web e o tipo de experimento em andamento no gerador de carga. Essa correspondência é feita usando o TomcatLogParser e o ExperimentLogParser.
 
-A função \verb|getParams(long l)| recebe como parâmetro o \textit{timestamp} do log do Apache Tomcat e percorre as entradas do HashMap tentando associar a entrada do log do tomcat com uma das instâncias do experimento. Se \textit{t} é o parâmetro passado como valor de \verb/l/, então o retorno é o tipo de experimento que tem chave \textit{k}, \textit{ti <= k < tj}, para \textit{ti} e \textit{tj} duas chaves adjacentes, \textit{i < j}. 
-
-A função \emph{Map}, para cada entrada, busca pelo experimento que fez a requisição e mapeia o tempo de resposta da requisição e é ilustrada pelo código a seguir:
+Para um entrada da função map, ou seja, uma linha do log do tomcat, O TomcatLogParser permite recuperar data da requisição, nome do serviço destino da requisição e o tempo de resposta despendido para gerar a resposta, através dos métodos getDate(), getServiceName() e getResponseTime(), respectivamente. Com isso, o tipo do experimento pode ser recuperado pelo ExperimentLogParser passando para o método getType(long time) o instante em milissegundos em que a requisição foi gerada. Assim, o map escreve a chave com o valor dado pelo tempo de resposta (ex.: "/choreography/bank,chor,2,100" como chave para 25 se o serviço /choreography/bank no experimento chor,2,100 gastou 25 milissegundos para responder) 
 
 \begin{figure} [!htb]
 \begin{center}
 \footnotesize
 \begin{lstlisting}[numbers=left]
-public void map(Object key, Text value, Context context)
-		throws IOException, InterruptedException {
-
-	if(!entryProcessor.matchesTomcatPattern(value.toString())) return;
-
-	String[] itr = value.toString().split(" ");
-	String timeString = itr[3].toString();
-	Date date = entryProcessor.getDateInMillis(timeString.substring(1));
-
-	if (date == null)
+public void map(final Object key, final Text value,
+		final Context context) throws IOException, InterruptedException {
+	final String tomcatLine = value.toString();
+	if (!tomcatParser.setLine(tomcatLine)) {
 		return;
+	}
 
-	String params = entryProcessor.getParams(date.getTime());
-	if (!params.isEmpty()) {
-		lineKey.set(itr[6].toString().concat("," + params));
-		lineValue.set(Integer.parseInt(itr[itr.length - 1].toString()));
+	try {
+		date = tomcatParser.getDate();
+		service = tomcatParser.getServiceName();
+		responseTime = tomcatParser.getResponseTime();
+		type = expParser.getType(date.getTime());
+
+		lineKey.set(service + "," + type);
+		lineValue.set(responseTime);
 		context.write(lineKey, lineValue);
+	} catch (ParseException e) {
+		e.printStackTrace();
+	} catch (ExperimentNotFoundException e) {
+		e.printStackTrace();
 	}
 }
 \end{lstlisting}
