@@ -13,25 +13,56 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
 public class ExperimentLogParser {
 	private static final String REGEX = "^# ((orch|chor),\\d+,\\d+),(\\d+)";
 	private static final Pattern PATTERN = Pattern.compile(REGEX);
 
 	private static final Map<Long, String> TYPES = new HashMap<Long, String>();
-	private List<Long> sortedTimes;
+	private static List<Long> sortedTimes;
+
 	private String curType;
 	private long start, nextStart;
 
-	public ExperimentLogParser(final String expTypeLog) throws IOException {
-		parseLog(expTypeLog);
-		setSortedTimes();
+	public ExperimentLogParser(final String filename) throws IOException {
+		if (TYPES.isEmpty()) {
+			final FileInputStream file = new FileInputStream(filename);
+			final InputStreamReader in = new InputStreamReader(file);
+			final BufferedReader reader = new BufferedReader(in);
+			ExperimentLogParser.init(reader);
+		}
 		setExperiment(0);
+	}
+
+	public ExperimentLogParser(final Path path) throws IOException {
+		if (TYPES.isEmpty()) {
+			final Configuration conf = new Configuration();
+			final FileSystem fs = FileSystem.get(conf);
+			final FSDataInputStream in = fs.open(path);
+			final InputStreamReader sReader = new InputStreamReader(in);
+			final BufferedReader reader = new BufferedReader(sReader);
+			init(reader);
+		}
+		setExperiment(0);
+	}
+
+	private static void init(final BufferedReader reader) throws IOException {
+		if (TYPES.isEmpty()) {
+			synchronized (ExperimentLogParser.class) {
+				parseLog(reader);
+				setSortedTimes();
+			}
+		}
 	}
 
 	/*
 	 * Creates a key array list with entry map keys to maintain it sorted
 	 */
-	private void setSortedTimes() {
+	private static void setSortedTimes() {
 		final Set<Long> times = TYPES.keySet();
 		sortedTimes = new ArrayList<Long>(times);
 		Collections.sort(sortedTimes);
@@ -41,9 +72,8 @@ public class ExperimentLogParser {
 	 * Reads the file entered as the first argument of TomcatLogAnalyzer, and
 	 * parses it to ge a Map of entries
 	 */
-	private void parseLog(final String filename) throws IOException {
-		final BufferedReader reader = new BufferedReader(new InputStreamReader(
-				new FileInputStream(filename)));
+	private static void parseLog(final BufferedReader reader)
+			throws IOException {
 		String line;
 		while ((line = reader.readLine()) != null) {
 			parseLogLine(line);
@@ -51,7 +81,7 @@ public class ExperimentLogParser {
 		reader.close();
 	}
 
-	private void parseLogLine(final String line) {
+	private static void parseLogLine(final String line) {
 		final Matcher matcher = PATTERN.matcher(line);
 		if (matcher.find()) {
 			final Long time = Long.parseLong(matcher.group(3));
@@ -102,6 +132,9 @@ public class ExperimentLogParser {
 	private int searchStartTimeIndex(final long time, final int left,
 			final int right) {
 		if (right - left <= 1) {
+			if (time >= sortedTimes.get(right)) {
+				return right;
+			}
 			return left;
 		}
 

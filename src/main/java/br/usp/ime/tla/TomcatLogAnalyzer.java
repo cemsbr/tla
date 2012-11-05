@@ -1,11 +1,13 @@
 package br.usp.ime.tla;
 
 import java.io.IOException;
+import java.net.URI;
 import java.text.ParseException;
 import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -20,29 +22,27 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class TomcatLogAnalyzer extends Configured implements Tool {
 
-	static ExperimentLogParser expParser;
-
-	public static void main(String[] args) throws Exception {
+	public static void main(final String[] args) throws Exception {
 		ToolRunner.run(new Configuration(), new TomcatLogAnalyzer(), args);
 	}
 
 	@Override
-	public int run(String[] args) throws Exception {
+	public int run(final String[] args) throws Exception {
 
 		if (args.length != 3) {
 			System.err.println("Usage: ep2 <appLog> <in_path> <out_path>");
 			return 0;
 		}
 
-		expParser = new ExperimentLogParser(args[0]);
+		final Configuration conf = getConf();
+		DistributedCache.addCacheFile(new URI(args[0]), conf);
 
-		Configuration conf = getConf();
-
-		FileSystem fs = FileSystem.get(conf);
+		final FileSystem fs = FileSystem.get(conf);
 		/* Overwrite output dir if exists */
 		fs.delete(new Path(args[2]), true);
 
-		Job job = new Job(conf, "ep2");
+		final Job job = new Job(conf, "ep2");
+
 		job.setJarByClass(TomcatLogAnalyzer.class);
 
 		job.setMapperClass(EpMapper.class);
@@ -51,12 +51,12 @@ public class TomcatLogAnalyzer extends Configured implements Tool {
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(IntWritable.class);
 
-		Path outputpath = new Path(args[2]);
+		final Path outputpath = new Path(args[2]);
 
 		FileInputFormat.addInputPath(job, new Path(args[1]));
 		FileOutputFormat.setOutputPath(job, outputpath);
 
-		boolean result = job.waitForCompletion(true);
+		final boolean result = job.waitForCompletion(true);
 
 		return (result ? 0 : 1);
 	}
@@ -72,9 +72,20 @@ public class TomcatLogAnalyzer extends Configured implements Tool {
 		private final IntWritable lineValue = new IntWritable();
 
 		private final TomcatLogParser tomcatParser = new TomcatLogParser();
+		private ExperimentLogParser expParser;
 		private Date date;
 		private String service, type;
 		private int responseTime;
+
+		@Override
+		public void setup(final Context context) throws IOException,
+				InterruptedException {
+			super.setup(context);
+			final Configuration conf = context.getConfiguration();
+			final URI[] cacheFiles = DistributedCache.getCacheFiles(conf);
+			final Path experimentLog = new Path(cacheFiles[0]);
+			expParser = new ExperimentLogParser(experimentLog);
+		}
 
 		// called for each line
 		public void map(final Object key, final Text value,
@@ -107,8 +118,8 @@ public class TomcatLogAnalyzer extends Configured implements Tool {
 
 		private Text result = new Text();
 
-		public void reduce(Text key, Iterable<IntWritable> values,
-				Context context) throws IOException, InterruptedException {
+		public void reduce(final Text key, final Iterable<IntWritable> values,
+				final Context context) throws IOException, InterruptedException {
 
 			final Statistics stats = new Statistics();
 
@@ -122,7 +133,7 @@ public class TomcatLogAnalyzer extends Configured implements Tool {
 			/*
 			 * Write results
 			 */
-			result.set("" + mean + "," + confInterval);
+			result.set(mean + "," + confInterval);
 			context.write(key, result);
 		}
 	}

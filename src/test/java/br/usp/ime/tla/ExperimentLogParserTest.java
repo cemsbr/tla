@@ -30,6 +30,11 @@ public class ExperimentLogParserTest {
 	}
 
 	@Test
+	public void testTimeHigherThanLast() throws ExperimentNotFoundException {
+		assertEquals("orch,1,1000", parser.getType(2350422372069L));
+	}
+
+	@Test
 	public void testParamsByExactTime() throws ExperimentNotFoundException {
 		assertEquals("orch,1,50", parser.getType(1349926295888L));
 		assertEquals("orch,1,100", parser.getType(1349926297945L));
