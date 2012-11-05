@@ -161,6 +161,8 @@ Nesta fase, geramos como chave o tipo de experimento e um identificador para o s
 
 Para um entrada da função map, ou seja, uma linha do log do tomcat, O TomcatLogParser permite recuperar data da requisição, nome do serviço destino da requisição e o tempo de resposta despendido para gerar a resposta, através dos métodos getDate(), getServiceName() e getResponseTime(), respectivamente. Com isso, o tipo do experimento pode ser recuperado pelo ExperimentLogParser passando para o método getType(long time) o instante em milissegundos em que a requisição foi gerada. Assim, o map escreve a chave com o valor dado pelo tempo de resposta (ex.: "/choreography/bank,chor,2,100" como chave para 25 se o serviço /choreography/bank no experimento chor,2,100 gastou 25 milissegundos para responder) 
 
+Abaixo pode ser vista a implementação da função map. Na linha 4 é feita a verificação quanto a pertinência do log ao experimento. Nas linhas de 9 a 11 são recuperados data, nome do serviço e tempo de resposta de uma requisição. Na linha 12 é feita a correspondência da requisição com o tipo de experimento. Nas linhas de 14 a 16 é "setado" chave, valor e enviado para escrita.
+
 \begin{figure} [!htb]
 \begin{center}
 \footnotesize
