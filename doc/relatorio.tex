@@ -157,11 +157,11 @@ Utilizaremos MapReduce através do Apache Hadoop para calcular médias e desvios
 
 \subsection{Map}
 
-Nesta fase, geramos como chave o tipo de experimento e um identificador para o serviço (ex.: \emph{supermarket5}, \emph{bank}). Para tal, é necessário fazer a corespondência entre o tempo da requisição registrado no servidor web e o tipo de experimento em andamento no gerador de carga. Essa correspondência é feita usando o TomcatLogParser e o ExperimentLogParser.
+Nesta fase, geramos como chave o tipo de experimento e um identificador para o serviço (ex.: \emph{supermarket5}, \emph{bank}). Para tal, é necessário fazer a corespondência entre o tempo da requisição registrado no servidor web e o tipo de experimento em andamento no gerador de carga. Essa correspondência é feita usando o \emph{TomcatLogParser} e o \emph{ExperimentLogParser}.
 
-Para um entrada da função map, ou seja, uma linha do log do tomcat, O TomcatLogParser permite recuperar data da requisição, nome do serviço destino da requisição e o tempo de resposta despendido para gerar a resposta, através dos métodos getDate(), getServiceName() e getResponseTime(), respectivamente. Com isso, o tipo do experimento pode ser recuperado pelo ExperimentLogParser passando para o método getType(long time) o instante em milissegundos em que a requisição foi gerada. Assim, o map escreve a chave com o valor dado pelo tempo de resposta (ex.: "/choreography/bank,chor,2,100" como chave para 25 se o serviço /choreography/bank no experimento chor,2,100 gastou 25 milissegundos para responder) 
+Para um entrada da função \emph{map}, ou seja, uma linha do log do tomcat, O \emph{TomcatLogParser} permite recuperar data da requisição, nome do serviço destino da requisição e o tempo de resposta despendido para gerar a resposta, através dos métodos \emph{getDate()}, \emph{getServiceName()} e \emph{getResponseTime()}, respectivamente. Com isso, o tipo do experimento pode ser recuperado pelo \emph{ExperimentLogParser} passando para o método \emph{getType(long time)} o instante em milissegundos em que a requisição foi gerada. Assim, o \emph{map} escreve a chave com o valor dado pelo tempo de resposta (ex.:\\ \verb|"/choreography/bank,chor,2,100"| como chave para \verb|25| se o serviço\\ \verb|/choreography/bank| no experimento \verb|chor,2,100| gastou \verb|25| milissegundos para responder) 
 
-Abaixo pode ser vista a implementação da função map. Na linha 4 é feita a verificação quanto a pertinência do log ao experimento. Nas linhas de 9 a 11 são recuperados data, nome do serviço e tempo de resposta de uma requisição. Na linha 12 é feita a correspondência da requisição com o tipo de experimento. Nas linhas de 14 a 16 é "setado" chave, valor e enviado para escrita.
+Abaixo pode ser vista a implementação da função \emph{map}. Na linha 4 é feita a verificação quanto a pertinência do log ao experimento. Nas linhas de 9 a 11 são recuperados data, nome do serviço e tempo de resposta da requisição. Na linha 12 é feita a correspondência da requisição com o tipo de experimento. Nas linhas 14 e 15 é atribuídos conteúdo para a chave e valor que serão escritos. Finalmente, na linha 16 é escrita a saída da função.
 
 \begin{figure} [!htb]
 \begin{center}
@@ -191,12 +191,15 @@ public void map(final Object key, final Text value,
 }
 \end{lstlisting}
 \end{center}
+\caption{Função \emph{map} do objeto \emph{Mapper}}
 \end{figure}
 
 % Detailed explanation line by line of map funciton
 
 \subsection{Reduce}
-A função \emph{Reduce} receberá inúmeros tempos de resposta para cada tipo de experimento. Seu trabalho será o de resumir os dados em média e intervalo de confiança (necessário o cálculo do desvio padrão), como no pseudo-código abaixo:
+A função \emph{Reduce} recebe inúmeros tempos de resposta para cada tipo de experimento (chave). Seu trabalho é o de resumir os dados em média e intervalo de confiança (necessário o cálculo do desvio padrão). Para isso a classe \emph{Statistics} provê funções para os devidos cálculos.
+
+Abaixo, a implementação da função \emph{reduce} do objeto \emph{Reducer}. Nas linhas 6 e 7, cada valor associado a um experimento é adicionado ao objeto stats para cálculo da média e intervalo de confiança. Por fim, na linha 13 é atribuído média e intervalo de confiança, e na linha 14 escrito no arquivo final.
 
 \begin{figure} [!htb]
 \begin{center}
@@ -223,8 +226,18 @@ public void reduce(Text key, Iterable<IntWritable> values,
 
 \subsection {Dificuldades na implementação}
 
-É importante notar que não é possível obter a quantidade de valores sem antes percorrer todo o iterador, nem reiniciá-lo após chegar no seu fim. Essas características dificultam o cálculo da média e do desvio padrão. Sem os devidos cuidados, a soma de $n$ elementos pode estourar o tipo primitivo. Além disso, o armazenamento de todos os valores para reutilizá-los pode exigir mais memória que o disponível.
+É importante notar que não é possível obter a quantidade de valores sem antes percorrer todo o iterador, nem reiniciá-lo após chegar no seu fim. Essas características dificultam o cálculo da média e do desvio padrão. Sem os devidos cuidados, a soma de $n$ elementos pode estourar o tipo primitivo. Para contornar esse problema o cálculo da média é feito da seguinte maneira: ao invés de somar todos os valores, a cada valor adicionado ao objeto \emph{Statistics} uma campo \emph{mean} é atualizado através da fórmula
+
+\[
+mean = lastmean \frac{size-1}{size} + \frac{value}{size}
+\]
+
+\noindent sendo \emph{size} a quantidade de valores da amostra dos quais foram extraído o último valor de média, \emph{value} o valor a ser adicionado no cáculo da média e \emph{lastmean} a última média sem o valor \emph{value}.
+
+Outro sim, o arquivo com os \emph{logs} do experimento deve ser compartilhado entre os vários \emph{mappers} que o arcabouço executa. Isso foi feito adicionando o arquivo como um arquivo em \emph{cache}. Dado que o arquivo é usado apenas para leitura, o acesso concorrente não gera maiores problemas.
 
 \section {Conclusão}
+
+
 
 \end{document}
