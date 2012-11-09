@@ -77,9 +77,17 @@
 
 \section{Introdução}
 
-Este trabalho visa analisar logs de servidores web e gerar dados para montar gráficos como o da Figura~\ref{fig:portal}. Ele mostra a média do tempo de resposta de um serviço conforme o número de clientes simultâneos aumenta. Um intervalo de confiança de 95\% também foi calculado para cada média, mas não é mostrado por ser muito pequeno neste caso.
+Este trabalho visa analisar logs de servidores web e gerar dados para montar
+gráficos como o da Figura~\ref{fig:portal}. Ele mostra a média do tempo de
+resposta de um serviço conforme o número de clientes simultâneos aumenta. Um
+intervalo de confiança de 95\% também foi calculado para cada média, mas não é
+mostrado por ser muito pequeno neste caso.
 
-A Figura~\ref{fig:portal} usou dados obtidos atráves de um gerador de carga sobre o serviço \emph{Portal} (a ser detalhado em \ref{sec:fmarket}). Além desse serviço, desejamos analisar o desempenho de todos os outros envolvidos na composição. Isso é possível através da análise dos logs de cada servidor, e o Hadoop nos ajudará a processar os 200 GB de logs do experimento executado.
+A Figura~\ref{fig:portal} usou dados obtidos atráves de um gerador de carga
+sobre o serviço \emph{Portal} (a ser detalhado em \ref{sec:fmarket}). Além
+desse serviço, desejamos analisar o desempenho de todos os outros envolvidos na
+composição. Isso é possível através da análise dos logs de cada servidor, e o
+Hadoop nos ajudará a processar os 200 GB de logs do experimento executado.
 
 \begin{figure}[!ht]
   \begin{center}
@@ -92,9 +100,21 @@ A Figura~\ref{fig:portal} usou dados obtidos atráves de um gerador de carga sob
 \subsection{Caso de Uso}
 \label{sec:fmarket}
 
-O experimento utilizou a composição de serviços \href{http://github.com/choreos/future_market_choreography/}{Future Market}, escrita em java e implantanda em Apache Tomcat, sendo um serviço por máquina. Resumidamente, o gerador de carga simula um cliente que deseja comprar uma lista de produtos nos supermercados que oferecem o menor preço para cada um deles. Além dos supermercados, existem outros serviços como banco, fornecedor, fabricante, entrega de pacotes e registro de serviços.
+O experimento utilizou a composição de serviços
+\href{http://github.com/choreos/future_market_choreography/}{Future Market},
+escrita em java e implantanda em Apache Tomcat, sendo um serviço por máquina.
+Resumidamente, o gerador de carga simula um cliente que deseja comprar uma
+lista de produtos nos supermercados que oferecem o menor preço para cada um
+deles. Além dos supermercados, existem outros serviços como banco, fornecedor,
+  fabricante, entrega de pacotes e registro de serviços.
 
-Existem mais de uma instância de um determinado serviço, podendo haver até 17 no total em nosso experimento (em 17 servidores diferentes). Em particular, estamos interessados em comparar dois tipos de composição: orquestração e coreografia. No primeiro tipo, os serviços comunicam-se uns com os outros por intermédio do serviço \emph{Portal}, como podemos ver na Figura~\ref{fig:orch}. Já na coreografia, os serviços se comunicam diretamente, como na Figura~\ref{fig:chor}. 
+Existem mais de uma instância de um determinado serviço, podendo haver até 17
+no total em nosso experimento (em 17 servidores diferentes). Em particular,
+   estamos interessados em comparar dois tipos de composição: orquestração e
+   coreografia. No primeiro tipo, os serviços comunicam-se uns com os outros
+   por intermédio do serviço \emph{Portal}, como podemos ver na
+   Figura~\ref{fig:orch}. Já na coreografia, os serviços se comunicam
+   diretamente, como na Figura~\ref{fig:chor}. 
 
 \begin{figure}
   \begin{center}
@@ -115,7 +135,8 @@ Existem mais de uma instância de um determinado serviço, podendo haver até 17
 \section{Dados de Entrada}
 
 \subsection{Gerador de Carga}
-O gerador de carga desenvolvido para o \emph{Portal} produz um log no seguinte formato:
+O gerador de carga desenvolvido para o \emph{Portal} produz um log no seguinte
+formato:
 
 \begin{verbatim}
 # orch,1,50,1349926295888
@@ -139,29 +160,63 @@ As linhas que iniciam com \verb/#/ possuem a seguinte semântica:\\
 \end{tabular}
 \\
 
-Em seguida, os tempos de resposta são registrados um por linha, totalizando $n$ registros, onde $n$ é o número de clientes simultâneos. A simulação contém mais de uma ocorrência para uma dada arquitetura e número de clientes simultâneos.
+Em seguida, os tempos de resposta são registrados um por linha, totalizando $n$
+registros, onde $n$ é o número de clientes simultâneos. A simulação contém mais
+de uma ocorrência para uma dada arquitetura e número de clientes simultâneos.
 
 \subsection{Log}
-  O formato do log do Apache Tomcat foi modificado, possuindo um campo a mais que o padão no final, correspondente ao tempo de processamento da requisição. Como exemplo, temos a linha:
+  O formato do log do Apache Tomcat foi modificado, possuindo um campo a mais
+  que o padão no final, correspondente ao tempo de processamento da requisição.
+  Como exemplo, temos a linha:
 
 \begin{verbatim}
 198.55.32.149 - - [09/Oct/2012:02:47:56 -0700] "POST
 /supermarket5/orchestration HTTP/1.1" 200 914 811
 \end{verbatim}
 
-Neste exemplo, a requisição ao serviço \emph{Supermarket} de número 5 na orquestração demorou 811 milissegundos para ser processada. Note que não há como inferir, somente por esta linha, quantos clientes simultâneos estavam acessando o portal neste momento, assim como outras características da arquitetura (número de portais).
+Neste exemplo, a requisição ao serviço \emph{Supermarket} de número 5 na
+orquestração demorou 811 milissegundos para ser processada. Note que não há
+como inferir, somente por esta linha, quantos clientes simultâneos estavam
+acessando o portal neste momento, assim como outras características da
+arquitetura (número de portais).
 
 \section{Hadoop}
 
-Foi utilizado MapReduce através do Apache Hadoop para calcular médias e desvios padrão por tipo de experimento num total de 200 GB de dados. Um tipo de experimento é determinado pelo tipo de composição, número de portais e pela quantidade de clientes simultâneos. Os códigos das funções \emph{Map} e \emph{Reduce} são apresentados nas próximas subseções.
+Foi utilizado MapReduce através do Apache Hadoop para calcular médias e desvios
+padrão por tipo de experimento num total de 200 GB de dados. Um tipo de
+experimento é determinado pelo tipo de composição, número de portais e pela
+quantidade de clientes simultâneos. Os códigos das funções \emph{Map} e
+\emph{Reduce} são apresentados nas próximas subseções.
 
 \subsection{Map}
 
-Nesta fase, foi gerado como chave o tipo de experimento e um identificador para o serviço (ex.: \emph{supermarket5}, \emph{bank}). Para tal, foi necessário fazer a corespondência entre o tempo da requisição registrado no servidor web e o tipo de experimento em andamento no gerador de carga. Essa correspondência foi feita usando os \emph{parsers} \emph{TomcatLogParser} e \emph{ExperimentLogParser}.
+Nesta fase, foi gerado como chave o tipo de experimento e um identificador para
+o serviço (ex.: \emph{supermarket5}, \emph{bank}). Para tal, foi necessário
+fazer a corespondência entre o tempo da requisição registrado no servidor web e
+o tipo de experimento em andamento no gerador de carga. Essa correspondência
+foi feita usando os \emph{parsers} \emph{TomcatLogParser} e
+\emph{ExperimentLogParser}.
 
-Para um entrada da função \emph{map}, ou seja, uma linha do \emph{log} do Apache Tomcat, O \emph{TomcatLogParser} permite recuperar data da requisição, nome do serviço destino da requisição e o tempo de resposta despendido, através dos métodos \emph{getDate()}, \emph{getServiceName()} e \emph{getResponseTime()}, respectivamente. Com isso, o tipo do experimento que gerou o registro no \emph{log} do Apache Tomcat pode ser recuperado pelo \emph{ExperimentLogParser} passando para o método \emph{getType(long time)} o instante em milissegundos em que a requisição foi gerada. Assim, o \emph{map} associa a chave representando o experimento com o tempo gasto para processá-lo (ex.:\\ a cadeia \verb|"/choreography/bank,chor,2,100"| é chave para \verb|25| se o serviço\\ \verb|/choreography/bank| no experimento \verb|chor,2,100| gastou \verb|25| milissegundos para responder). 
+Para um entrada da função \emph{map}, ou seja, uma linha do \emph{log} do
+Apache Tomcat, O \emph{TomcatLogParser} permite recuperar data da requisição,
+       nome do serviço destino da requisição e o tempo de resposta despendido,
+       através dos métodos \emph{getDate()}, \emph{getServiceName()} e
+       \emph{getResponseTime()}, respectivamente. Com isso, o tipo do
+       experimento que gerou o registro no \emph{log} do Apache Tomcat pode ser
+       recuperado pelo \emph{ExperimentLogParser} passando para o método
+       \emph{getType(long time)} o instante em milissegundos em que a
+       requisição foi gerada. Assim, o \emph{map} associa a chave representando
+       o experimento com o tempo gasto para processá-lo (ex.:\\ a cadeia
+           \verb|"/choreography/bank,chor,2,100"| é chave para \verb|25| se o
+           serviço\\ \verb|/choreography/bank| no experimento \verb|chor,2,100|
+           gastou \verb|25| milissegundos para responder). 
 
-Abaixo pode ser vista a implementação da função \emph{map}. Na linha 4 é feita a verificação quanto a pertinência do registro ao experimento. Nas linhas de 9 a 11 são recuperados data, nome do serviço e tempo de resposta da requisição. Na linha 12 é feita a correspondência da requisição com o tipo de experimento. Nas linhas 14 e 15 é atribuído conteúdo para a chave e valor que serão escritos. Finalmente, na linha 16 é escrita a saída da função.
+Abaixo pode ser vista a implementação da função \emph{map}. Na linha 4 é feita
+a verificação quanto a pertinência do registro ao experimento. Nas linhas de 9
+a 11 são recuperados data, nome do serviço e tempo de resposta da requisição.
+Na linha 12 é feita a correspondência da requisição com o tipo de experimento.
+Nas linhas 14 e 15 é atribuído conteúdo para a chave e valor que serão
+escritos. Finalmente, na linha 16 é escrita a saída da função.
 
 \begin{figure} [!htb]
 \begin{center}
@@ -197,9 +252,16 @@ public void map(final Object key, final Text value,
 % Detailed explanation line by line of map funciton
 
 \subsection{Reduce}
-A função \emph{Reduce} recebe inúmeros tempos de resposta para cada tipo de experimento (chave). Seu trabalho é o de resumir os dados em média e intervalo de confiança (necessário o cálculo do desvio padrão). Para isso a classe \emph{Statistics} provê funções para os devidos cálculos.
+A função \emph{Reduce} recebe inúmeros tempos de resposta para cada tipo de
+experimento (chave). Seu trabalho é o de resumir os dados em média e intervalo
+de confiança (necessário o cálculo do desvio padrão). Para isso a classe
+\emph{Statistics} provê funções para os devidos cálculos.
 
-Abaixo, a implementação da função \emph{reduce} do objeto \emph{Reducer}. Nas linhas 6 e 7, cada valor associado a um experimento é adicionado ao objeto stats para cálculo da média e intervalo de confiança. Por fim, na linha 13 é atribuído média e intervalo de confiança, e na linha 14 escrito no arquivo final.
+Abaixo, a implementação da função \emph{reduce} do objeto \emph{Reducer}. Nas
+linhas 6 e 7, cada valor associado a um experimento é adicionado ao objeto
+stats para cálculo da média e intervalo de confiança. Por fim, na linha 13 é
+atribuído média e intervalo de confiança, e na linha 14 escrito no arquivo
+final.
 
 \begin{figure} [!htb]
 \begin{center}
@@ -227,18 +289,40 @@ public void reduce(Text key, Iterable<IntWritable> values,
 
 \subsection {Dificuldades na implementação}
 
-É importante notar que não é possível obter a quantidade de valores sem antes percorrer todo o iterador, nem reiniciá-lo após chegar no seu fim. Essas características dificultam o cálculo da média e do desvio padrão. Sem os devidos cuidados, a soma de $n$ elementos pode estourar o tipo primitivo. Para contornar esse problema, para o cálculo da média ao invés de somar todos os valores, a cada valor adicionado ao objeto \emph{Statistics} uma campo \emph{mean} é atualizado através da fórmula
+É importante notar que não é possível obter a quantidade de valores sem antes
+percorrer todo o iterador, nem reiniciá-lo após chegar no seu fim. Essas
+características dificultam o cálculo da média e do desvio padrão. Sem os
+devidos cuidados, a soma de $n$ elementos pode estourar o tipo primitivo. Para
+contornar esse problema, para o cálculo da média ao invés de somar todos os
+valores, a cada valor adicionado ao objeto \emph{Statistics} uma campo
+\emph{mean} é atualizado através da fórmula
 
 \[
 mean = lastmean \frac{size-1}{size} + \frac{value}{size}
 \]
 
-\noindent sendo \emph{size} a quantidade de valores da amostra dos quais foram extraído o último valor de média, \emph{value} o valor a ser adicionado no cáculo da média e \emph{lastmean} a última média sem o valor \emph{value}.
+\noindent sendo \emph{size} a quantidade de valores da amostra dos quais foram
+extraído o último valor de média, \emph{value} o valor a ser adicionado no
+cáculo da média e \emph{lastmean} a última média sem o valor \emph{value}.
 
-Outro sim, o arquivo com os \emph{logs} do experimento deve ser compartilhado entre os vários \emph{mappers} que o arcabouço executa. Para um cenário pseudo-distribuído ou distribuído, é necessário que cada processo \emph{Mapper} acesse esses \emph{logs}. Isso foi feito adicionando o arquivo \emph{cache} usando \emph{DistributedCache}. Dado que o arquivo é usado apenas para leitura, o acesso concorrente não gera maiores problemas.
+Outro sim, o arquivo com os \emph{logs} do experimento deve ser compartilhado
+entre os vários \emph{mappers} que o arcabouço executa. Para um cenário
+pseudo-distribuído ou distribuído, é necessário que cada processo \emph{Mapper}
+acesse esses \emph{logs}. Isso foi feito adicionando o arquivo \emph{cache}
+usando \emph{DistributedCache}. Dado que o arquivo é usado apenas para leitura,
+       o acesso concorrente não gera maiores problemas.
 
 \section {Conclusão}
 
-Considerando que a análise de comportamento de sistemas distribuídos não é trivial, o trabalho mostrou a facilidade que o arcabouço pode proporcionar nessa análise considerando arquivos com registro de eventos do sistema. A correlação entre requisições geradas e o registro da resposta a estas, foi resumida a configurar um \emph{Mapper} que a fizesse. Para gerar dados estatísticos, a configuração do \emph{Reducer} gera saída formatada de maneira fácil a gerar gráficos com ferramentas para computação estatística (ex.: ambiente \textit{open source} \href{http://www.r-project.org/}{R}).
+Considerando que a análise de comportamento de sistemas distribuídos não é
+trivial, o trabalho mostrou a facilidade que o arcabouço pode proporcionar
+nessa análise considerando arquivos com registro de eventos do sistema. A
+correlação entre requisições geradas e o registro da resposta a estas, foi
+resumida a configurar um \emph{Mapper} que a fizesse. Para gerar dados
+estatísticos, a configuração do \emph{Reducer} gera saída formatada de maneira
+fácil a gerar gráficos com ferramentas para computação estatística (ex.:
+    ambiente \textit{open source} \href{http://www.r-project.org/}{R}).
 
 \end{document}
+
+% vim: set tw=80 fo=cat:
