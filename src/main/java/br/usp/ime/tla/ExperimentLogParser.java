@@ -29,34 +29,33 @@ public class ExperimentLogParser {
 	private long start, nextStart;
 
 	public ExperimentLogParser(final String filename) throws IOException {
-		if (TYPES.isEmpty()) {
-			final FileInputStream file = new FileInputStream(filename);
-			final InputStreamReader in = new InputStreamReader(file);
-			final BufferedReader reader = new BufferedReader(in);
-			ExperimentLogParser.init(reader);
+		synchronized (TYPES) {
+			if (TYPES.isEmpty()) {
+				final FileInputStream file = new FileInputStream(filename);
+				final InputStreamReader reader = new InputStreamReader(file);
+				init(reader);
+			}
 		}
 		setExperiment(0);
 	}
 
 	public ExperimentLogParser(final Path path) throws IOException {
-		if (TYPES.isEmpty()) {
-			final Configuration conf = new Configuration();
-			final FileSystem fs = FileSystem.get(conf);
-			final FSDataInputStream in = fs.open(path);
-			final InputStreamReader sReader = new InputStreamReader(in);
-			final BufferedReader reader = new BufferedReader(sReader);
-			init(reader);
+		synchronized (TYPES) {
+			if (TYPES.isEmpty()) {
+				final Configuration conf = new Configuration();
+				final FileSystem fileSystem = FileSystem.get(conf);
+				final FSDataInputStream input = fileSystem.open(path);
+				final InputStreamReader reader = new InputStreamReader(input);
+				init(reader);
+			}
 		}
 		setExperiment(0);
 	}
 
-	private static void init(final BufferedReader reader) throws IOException {
-		if (TYPES.isEmpty()) {
-			synchronized (ExperimentLogParser.class) {
-				parseLog(reader);
-				setSortedTimes();
-			}
-		}
+	private static void init(final InputStreamReader reader) throws IOException {
+		final BufferedReader buffer = new BufferedReader(reader);
+		parseLog(buffer);
+		setSortedTimes();
 	}
 
 	/*
