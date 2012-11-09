@@ -190,15 +190,15 @@ quantidade de clientes simultâneos. Os códigos das funções \emph{Map} e
 
 \subsection{Map}
 
-Nesta fase, foi gerado como chave o tipo de experimento e um identificador para
-o serviço (ex.: \emph{supermarket5}, \emph{bank}). Para tal, foi necessário
-fazer a corespondência entre o tempo da requisição registrado no servidor web e
-o tipo de experimento em andamento no gerador de carga. Essa correspondência
-foi feita usando os \emph{parsers} \emph{TomcatLogParser} e
+Nesta fase, foi gerado como chave e um identificador para o serviço (ex.:
+    \emph{supermarket5}, \emph{bank}) e o tipo de experimento. Para tal, foi
+necessário fazer a corespondência entre o tempo da requisição registrado no
+servidor web e o tipo de experimento em andamento no gerador de carga. Essa
+correspondência foi feita usando os \emph{parsers} \emph{TomcatLogParser} e
 \emph{ExperimentLogParser}.
 
 Para um entrada da função \emph{map}, ou seja, uma linha do \emph{log} do
-Apache Tomcat, O \emph{TomcatLogParser} permite recuperar data da requisição,
+Apache Tomcat, o \emph{TomcatLogParser} permite recuperar data da requisição,
        nome do serviço destino da requisição e o tempo de resposta despendido,
        através dos métodos \emph{getDate()}, \emph{getServiceName()} e
        \emph{getResponseTime()}, respectivamente. Com isso, o tipo do
@@ -206,13 +206,18 @@ Apache Tomcat, O \emph{TomcatLogParser} permite recuperar data da requisição,
        recuperado pelo \emph{ExperimentLogParser} passando para o método
        \emph{getType(long time)} o instante em milissegundos em que a
        requisição foi gerada. Assim, o \emph{map} associa a chave representando
-       o experimento com o tempo gasto para processá-lo (ex.:\\ a cadeia
-           \verb|"/choreography/bank,chor,2,100"| é chave para \verb|25| se o
-           serviço\\ \verb|/choreography/bank| no experimento \verb|chor,2,100|
-           gastou \verb|25| milissegundos para responder). 
+       o experimento com o valor do tempo gasto para processá-lo (ex.:\\ a
+           cadeia \verb|"/choreography/bank,chor,2,100"| é chave para \verb|25|
+           se o serviço\\ \verb|/choreography/bank| no experimento
+           \verb|chor,2,100| gastou \verb|25| milissegundos para responder).
+       Para economizar memória e processamento, os dados do log do experimento
+       são compartilhados entre os objetos da classe \emph{ExperimentLogParser}
+       através de atributos estáticos cujas atribuições são realizadas no
+       construtor, dentro de um bloco sincronizado (palavra-chave
+           \emph{synchronized} da linguagem Java).
 
 Abaixo pode ser vista a implementação da função \emph{map}. Na linha 4 é feita
-a verificação quanto a pertinência do registro ao experimento. Nas linhas de 9
+a verificação quanto à pertinência do registro ao experimento. Nas linhas de 9
 a 11 são recuperados data, nome do serviço e tempo de resposta da requisição.
 Na linha 12 é feita a correspondência da requisição com o tipo de experimento.
 Nas linhas 14 e 15 é atribuído conteúdo para a chave e valor que serão
@@ -251,17 +256,17 @@ public void map(final Object key, final Text value,
 
 % Detailed explanation line by line of map funciton
 
-\subsection{Reduce}
-A função \emph{Reduce} recebe inúmeros tempos de resposta para cada tipo de
-experimento (chave). Seu trabalho é o de resumir os dados em média e intervalo
-de confiança (necessário o cálculo do desvio padrão). Para isso a classe
-\emph{Statistics} provê funções para os devidos cálculos.
+\subsection{Reduce} A função \emph{Reduce} recebe, para cada tipo de
+experimento (chave), inúmeros tempos de resposta.  Seu trabalho é o de resumir
+os dados em média e intervalo de confiança (necessário o cálculo do desvio
+    padrão). Para isso a classe \emph{Statistics} provê funções para os devidos
+cálculos.
 
 Abaixo, a implementação da função \emph{reduce} do objeto \emph{Reducer}. Nas
 linhas 6 e 7, cada valor associado a um experimento é adicionado ao objeto
-stats para cálculo da média e intervalo de confiança. Por fim, na linha 13 é
-atribuído média e intervalo de confiança, e na linha 14 escrito no arquivo
-final.
+\verb|stats| para o cálculo da média e do intervalo de confiança. Por fim, na
+linha 13, são concatenados a média e o intervalo de confiança  e, na linha 14,
+      o resultado é escrito no arquivo final.
 
 \begin{figure} [!htb]
 \begin{center}
@@ -287,41 +292,147 @@ public void reduce(Text key, Iterable<IntWritable> values,
 \caption{Função \emph{reduce} do objeto \emph{Reducer}}
 \end{figure}
 
-\subsection {Dificuldades na implementação}
+\subsection {HDFS}
+
+Pelo fato do log do experimento ser utlizado por todos os \emph{mappers}, mais
+expecificamente pela classe \verb|ExperimentLogParser|, utilizamos a classe
+\verb|DistributedCache| para otimizar a distribuição do arquivo para todos os
+nós.
+
+\subsection {Dificuldades}
+
+\subsubsection{Configuração do Hadoop}
+
+A configuração do modo pseudo-distribuído não foi fácil como parece no tutorial
+oficial. O sistema operacional não estava configurado para IPv6 e as mensagens
+de erro não ajudaram a detectar o problema. Após horas de depuração e pesquisa,
+   a solução foi encontrada no fórum da disciplina. A preferência a IPv4 foi
+   configurada no Java e tudo funcionou corretamente.
+
+\subsubsection{\emph{Overflow}}
 
 É importante notar que não é possível obter a quantidade de valores sem antes
-percorrer todo o iterador, nem reiniciá-lo após chegar no seu fim. Essas
+percorrer todo o iterador, nem reiniciá-lo após chegar ao seu fim. Essas
 características dificultam o cálculo da média e do desvio padrão. Sem os
-devidos cuidados, a soma de $n$ elementos pode estourar o tipo primitivo. Para
-contornar esse problema, para o cálculo da média ao invés de somar todos os
-valores, a cada valor adicionado ao objeto \emph{Statistics} uma campo
-\emph{mean} é atualizado através da fórmula
+devidos cuidados, a soma de $n$ elementos pode estourar o tipo primitivo.
 
-\[
-mean = lastmean \frac{size-1}{size} + \frac{value}{size}
-\]
+Para contornar evitar \emph{overflow} no cálculo da média, ao invés de somar
+todos os valores e fazer uma só divisão no final, atualizamos a média
+\emph{mean} após cada valor adicionado ao objeto da classe \emph{Statistics}
+seguindo a fórmula
 
-\noindent sendo \emph{size} a quantidade de valores da amostra dos quais foram
-extraído o último valor de média, \emph{value} o valor a ser adicionado no
-cáculo da média e \emph{lastmean} a última média sem o valor \emph{value}.
+\[ mean = mean \times \frac{size-1}{size} + \frac{value}{size} \]
 
-Outro sim, o arquivo com os \emph{logs} do experimento deve ser compartilhado
-entre os vários \emph{mappers} que o arcabouço executa. Para um cenário
-pseudo-distribuído ou distribuído, é necessário que cada processo \emph{Mapper}
-acesse esses \emph{logs}. Isso foi feito adicionando o arquivo \emph{cache}
-usando \emph{DistributedCache}. Dado que o arquivo é usado apenas para leitura,
-       o acesso concorrente não gera maiores problemas.
+\noindent sendo \emph{size} a quantidade de valores da amostra parcial e
+\emph{value} o último valor a ser adicionado nela.
+
+Solução análoga foi aplicada ao cálculo do desvio padrão, com a diferença de
+que a média é um pré-requisito para calculá-lo, motivo pelo qual armazenamos
+todos os valores em um atributo antes de usar o algoritmo da
+Figura~\ref{fig:stddev}.
+
+\begin{figure} [!htb] \begin{center} \footnotesize
+\begin{lstlisting}[numbers=left]
+public double getStdDev() {
+    double variance = 0;
+    for (Integer value : values) {
+      variance += ((value - mean) * (value - mean)) / (values.size() - 1);
+    }
+    return Math.sqrt(variance);
+  }\end{lstlisting}
+\end{center}
+\caption{Cálculo do desvio padrão evitando \emph{overflow}.}
+\label{fig:stddev}
+\end{figure}
+
+\subsubsection{Velocidade do Processamento}
+
+Para testar a aplicação, utilizamos dois logs de 1,3 MB: o do experimento e o
+do Tomcat, sendo o tamanho do último após compressão por \emph{bzip2}. O Hadoop
+foi configurado no modo \emph{stand-alone} para os testes. A primeira versão
+ficou lenta, demorando cerca de 30 minutos. Numa segunda versão, o tempo caiu
+para 3 minutos ao utilizarmos a classe \verb|Pattern| do Java. Após outras
+otimizações, como a busca binária da data no log do experimento, a última
+versão foi executada em cerca de 30 segundos. Os tempos de execução foram
+tomados em um MacBook Pro com processador Pentium i7 de dois núcleos com 2.7GHz
+e HT.
+
+\subsection{Facilidades}
+
+\subsubsection{Java}
+
+A familiaridade com a linguagem Java nos ajudou, em especial nas otimizações
+que aceleraram a execução em mais de 60 vezes. Fizemos testes com JUnit e
+encontramos rapidamente um \emph{archetype} para o
+\href{http://maven.apache.org/}{Maven}, facilitando a desenvolvimento.
+
+\subsubsection{Abstração}
+
+Não foi necessária a preocupação com o gerenciamento de um sistema
+distribuído.  O Hadoop abstrai toda a comunicação, distribuição de dados e
+computação, assim como o mascaramento de falhas. Além disso, não precisamos de
+um conjunto de computadores para testar a implementação, pois a configuração
+pseudo-distribuída nos ajudou a simular com boa semelhança um caso
+verdadeiramente distribuído.
+
+\section {Executando}
+
+Seguem instruções para executar o Tomcat Log Analyser no modo
+pseudo-distribuído com os arquivos de exemplo entregues. O mesmo deve valer
+para o modo verdadeiramente distribuído. São assumidas as seguintes
+configurações (as variáveis de ambiente são ilustrativas e não necessárias para
+    o funcionamento correto do programa):
+
+\begin{enumerate}
+  \item \$TLA é o diretório raiz do arquivo entregue para correção
+  \item \$HADOOP corresponde à pasta onde o Hadoop está instalado
+  \item Hadoop configurado \end{enumerate}
+
+\subsection {Jar Fornecido}
+
+O pacote entregue inclui uma compilação por Java 7 com compatibilidade com Java
+6.
+
+\begin{verbatim}
+# Copiando arquivos de entrada para o HDFS:
+$ cd $HADOOP
+$ bin/hadoop fs -mkdir tla-input
+$ bin/hadoop fs -copyFromLocal $TLA/files/* tla-input/
+# Executando o programa:
+$ bin/hadoop jar $TLA/bin/tla-1.0-job.jar \
+tla-input/filtered_log tla-input/input_path tla-output
+# Copiando a saída do HDFS:
+bin/hadoop fs -get tla-output tla-output
+\end{verbatim}
+
+O resultado da execução será encontrado na pasta \verb|tla-output|.
+
+\subsection {Testes e Compilação}
+
+Para executar os testes da aplicação e compilá-la, gerando
+\verb|target/tla-1.0-job.jar| é necessário o software Maven 3 e os seguintes
+comandos:
+
+\begin{verbatim}
+$ cd $TLA
+$ mvn package
+\end{verbatim}
 
 \section {Conclusão}
 
 Considerando que a análise de comportamento de sistemas distribuídos não é
 trivial, o trabalho mostrou a facilidade que o arcabouço pode proporcionar
 nessa análise considerando arquivos com registro de eventos do sistema. A
-correlação entre requisições geradas e o registro da resposta a estas, foi
-resumida a configurar um \emph{Mapper} que a fizesse. Para gerar dados
-estatísticos, a configuração do \emph{Reducer} gera saída formatada de maneira
-fácil a gerar gráficos com ferramentas para computação estatística (ex.:
-    ambiente \textit{open source} \href{http://www.r-project.org/}{R}).
+correlação entre o tipo de experimento realizado e o registro da resposta a
+cada requisição foi resolvida ao configurar um \emph{Mapper} que a fizesse.
+Para gerar dados estatísticos, a configuração do \emph{Reducer} gera uma saída
+formatada que é rapida e facilmente lida por outros aplicativos que geram
+gráficos (ex.: os programas \textit{open source}
+    \href{http://www.r-project.org/}{R} e
+    \href{http://www.gnuplot.info/}{GnuPlot}).
+
+Algumas dificuldades foram encontradas, mas todas, superadas. O trabalho
+resultante será utilizado para nossas pesquisas e publicado sob licença livre.
 
 \end{document}
 
