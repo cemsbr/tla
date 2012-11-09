@@ -28,14 +28,11 @@ public class Statistics {
 	 * @return
 	 */
 	public double getStdDev() {
-		double squaredSum = 0;
+		double variance = 0;
 		for (Integer value : values) {
-			squaredSum += ((value - mean) * (value - mean));
+			variance += ((value - mean) * (value - mean)) / (values.size() - 1);
 		}
-		final double variance = squaredSum / (values.size() - 1);
-		final double stdDev = Math.sqrt(variance);
-
-		return stdDev;
+		return Math.sqrt(variance);
 	}
 
 	/**
